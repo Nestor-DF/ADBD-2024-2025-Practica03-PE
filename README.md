@@ -8,7 +8,7 @@ STOCK(**_id_zona_**, **_id_vivero_**, **_id_producto_**, stock)
 
 EMPLEADO(**id_empleado**, nombre, email, teléfono)
 
-HISTORIAL(**_id_empleado_**, **_id_zona_**, **fecha_inicio**, **fecha_fin**, puesto)
+HISTORIAL(**_id_empleado_**, **_id_zona_**, fecha_inicio, fecha_fin, puesto)
 
 PRODUCTO-PEDIDO(**_id_pedido_**, **_id_producto_**, cantidad)
 
