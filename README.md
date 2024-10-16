@@ -15,3 +15,7 @@ PRODUCTO-PEDIDO(**_id_pedido_**, **_id_producto_**, cantidad)
 PEDIDO(**id_pedido**, _id_empleado_, _id_cliente_, importe_total, fecha_pedido)
 
 CLIENTE(**id_cliente**, nombre, email, fecha_ingreso)
+
+
+## Recursos empleados
+https://github.com/ull-cs/adbd/blob/main/postgresql-tutorial/index.md#introducci%C3%B3n
