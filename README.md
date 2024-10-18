@@ -1,3 +1,5 @@
+## Modelo Relacional
+
 VIVERO(**id_vivero**, nombre, latitud, longuitud)
 
 ZONA(**id_zona**, **_id_vivero_**, nombre, latitud, longuitud)
@@ -8,7 +10,7 @@ STOCK(**_id_zona_**, **_id_vivero_**, **_id_producto_**, stock)
 
 EMPLEADO(**id_empleado**, nombre, email, teléfono)
 
-HISTORIAL(**_id_empleado_**, **_id_zona_**, fecha_inicio, fecha_fin, puesto) controlar fechas
+HISTORIAL(**_id_empleado_**, **_id_zona_**, fecha_inicio, fecha_fin, puesto) Controlar fechas con trigger?
 
 PRODUCTO-PEDIDO(**_id_pedido_**, **_id_producto_**, cantidad)
 
