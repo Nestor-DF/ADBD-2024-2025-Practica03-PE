@@ -25,7 +25,8 @@ CREATE TABLE ZONA (
 CREATE TABLE PRODUCTO (
     id_producto SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
-    precio NUMERIC(10, 2) CHECK (precio >= 0) NOT NULL
+    precio_base NUMERIC(10, 2) CHECK (precio_base >= 0) NOT NULL,
+    precio_final NUMERIC(10, 2) GENERATED ALWAYS AS (precio_base + (precio_base * 0.07)) STORED
 );
 
 -- Tabla STOCK
@@ -33,7 +34,7 @@ CREATE TABLE STOCK (
     id_zona INT NOT NULL,
     id_vivero INT NOT NULL,
     id_producto INT NOT NULL,
-    stock INT CHECK (stock >= 0) DEFAULT 0,
+    stock INT CHECK (stock >= 0),
     PRIMARY KEY (id_zona, id_vivero, id_producto),
     FOREIGN KEY (id_zona) REFERENCES ZONA(id_zona) ON DELETE CASCADE,
     FOREIGN KEY (id_vivero) REFERENCES VIVERO(id_vivero) ON DELETE CASCADE,
@@ -44,18 +45,29 @@ CREATE TABLE STOCK (
 CREATE TABLE EMPLEADO (
     id_empleado SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    telefono VARCHAR(15) NOT NULL
+    email VARCHAR(100) UNIQUE NOT NULL
 );
 
--- Tabla HISTORIAL
+-- Crear tabla TELEFONO
+CREATE TABLE TELEFONO (
+    id_empleado INT NOT NULL,
+    telefono VARCHAR(15) NOT NULL,
+    FOREIGN KEY (id_empleado) REFERENCES EMPLEADO(id_empleado) ON DELETE CASCADE,
+    PRIMARY KEY (id_empleado, telefono)
+);
+
+-- Crear tabla HISTORIAL
 CREATE TABLE HISTORIAL (
-    id_empleado INT NOT NULL REFERENCES EMPLEADO(id_empleado) ON DELETE CASCADE,
-    id_zona INT NOT NULL REFERENCES ZONA(id_zona) ON DELETE CASCADE,
+    id_empleado INT NOT NULL,
+    id_vivero INT NOT NULL,
+    id_zona INT NOT NULL,
     fecha_inicio DATE NOT NULL,
-    fecha_fin DATE,
-    puesto VARCHAR(100) NOT NULL,
-    PRIMARY KEY (id_empleado, id_zona, fecha_inicio)
+    fecha_fin DATE CHECK (fecha_fin IS NULL OR fecha_fin > fecha_inicio),
+    puesto VARCHAR(100),
+    FOREIGN KEY (id_empleado) REFERENCES EMPLEADO(id_empleado) ON DELETE CASCADE,
+    FOREIGN KEY (id_vivero) REFERENCES VIVERO(id_vivero) ON DELETE CASCADE,
+    FOREIGN KEY (id_zona) REFERENCES ZONA(id_zona) ON DELETE CASCADE,
+    PRIMARY KEY (id_empleado, id_vivero, id_zona)
 );
 
 -- Tabla CLIENTE
@@ -66,13 +78,15 @@ CREATE TABLE CLIENTE (
     fecha_ingreso DATE NOT NULL
 );
 
--- Tabla PEDIDO
+-- Crear tabla PEDIDO
 CREATE TABLE PEDIDO (
     id_pedido SERIAL PRIMARY KEY,
-    id_empleado INT REFERENCES EMPLEADO(id_empleado) ON DELETE SET NULL,
-    id_cliente INT REFERENCES CLIENTE(id_cliente) ON DELETE SET NULL,
-    importe_total NUMERIC(10, 2) CHECK (importe_total >= 0) NOT NULL,
-    fecha_pedido DATE NOT NULL
+    id_empleado INT NOT NULL,
+    id_cliente INT,
+    importe_total NUMERIC(10, 2) CHECK (importe_total > 0) NOT NULL, -- CALCULAR IMPORTE TOTAL
+    fecha_pedido DATE NOT NULL DEFAULT CURRENT_DATE,
+    FOREIGN KEY (id_empleado) REFERENCES EMPLEADO(id_empleado) ON DELETE CASCADE,
+    FOREIGN KEY (id_cliente) REFERENCES CLIENTE(id_cliente) ON DELETE CASCADE
 );
 
 -- Tabla PRODUCTO-PEDIDO
@@ -83,87 +97,145 @@ CREATE TABLE PRODUCTO_PEDIDO (
     PRIMARY KEY (id_pedido, id_producto)
 );
 
--- Inserción de datos de prueba
 
--- Insertando VIVEROS
-INSERT INTO VIVERO (nombre, latitud, longitud) VALUES
-('Vivero Central', 28.123456, -15.654321),
-('Vivero Norte', 28.987654, -16.543210),
-('Vivero Este', 27.123456, -16.234567),
-('Vivero Sur', 27.987654, -17.543210),
-('Vivero Oeste', 28.567890, -15.987654);
 
--- Insertando ZONAS
-INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES
-(1, 'Zona A', 28.123456, -15.654321),
-(1, 'Zona B', 28.123499, -15.654399),
-(2, 'Zona C', 28.987654, -16.543210),
-(3, 'Zona D', 27.123456, -16.234567),
-(4, 'Zona E', 27.987654, -17.543210);
+-- Insertar datos de prueba
 
--- Insertando PRODUCTOS
-INSERT INTO PRODUCTO (nombre, precio) VALUES
-('Rosa', 3.50),
-('Orquídea', 10.00),
-('Tulipán', 5.75),
-('Cactus', 2.25),
-('Bonsái', 30.00);
+-- Tabla VIVERO
+INSERT INTO VIVERO (nombre, latitud, longitud) VALUES ('Vivero Norte', 28.4699, -16.2547);
+INSERT INTO VIVERO (nombre, latitud, longitud) VALUES ('Vivero Sur', 27.4699, -15.2547);
+INSERT INTO VIVERO (nombre, latitud, longitud) VALUES ('Vivero Este', 29.4699, -16.6547);
+INSERT INTO VIVERO (nombre, latitud, longitud) VALUES ('Vivero Oeste', 26.4699, -14.2547);
+INSERT INTO VIVERO (nombre, latitud, longitud) VALUES ('Vivero Central', 28.8799, -15.6547);
 
--- Insertando STOCK
-INSERT INTO STOCK (id_zona, id_vivero, id_producto, stock) VALUES
-(1, 1, 1, 50),
-(2, 1, 2, 20),
-(3, 2, 3, 100),
-(4, 3, 4, 15),
-(5, 4, 5, 10);
+-- Tabla ZONA
+INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (1, 'Zona A', 28.4698, -16.2548);
+INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (2, 'Zona B', 27.4698, -15.2548);
+INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (3, 'Zona C', 29.4698, -16.6548);
+INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (4, 'Zona D', 26.4698, -14.2548);
+INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (5, 'Zona E', 28.8798, -15.6548);
 
--- Insertando EMPLEADOS
-INSERT INTO EMPLEADO (nombre, email, telefono) VALUES
-('Ana López', 'ana@vivero.com', '600123456'),
-('Luis Pérez', 'luis@vivero.com', '600654321'),
-('Marta García', 'marta@vivero.com', '600789456'),
-('Carlos Díaz', 'carlos@vivero.com', '600987123'),
-('Lucía Gómez', 'lucia@vivero.com', '600321789');
+-- Tabla PRODUCTO
+INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Rosa', 5.00);
+INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Tulipan', 7.50);
+INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Orquídea', 10.00);
+INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Girasol', 3.50);
+INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Margarita', 2.00);
 
--- Insertando HISTORIAL
-INSERT INTO HISTORIAL (id_empleado, id_zona, fecha_inicio, fecha_fin, puesto) VALUES
-(1, 1, '2022-01-01', '2023-01-01', 'Gerente'),
-(2, 2, '2022-06-01', NULL, 'Vendedor'),
-(3, 3, '2021-05-15', '2022-05-15', 'Supervisor'),
-(4, 4, '2020-08-01', '2023-08-01', 'Jardinero'),
-(5, 5, '2019-07-10', NULL, 'Encargado');
+-- Tabla EMPLEADO
+INSERT INTO EMPLEADO (nombre, email) VALUES ('Carlos Perez', 'carlos@example.com');
+INSERT INTO EMPLEADO (nombre, email) VALUES ('Ana Gomez', 'ana@example.com');
+INSERT INTO EMPLEADO (nombre, email) VALUES ('Luis Ramirez', 'luis@example.com');
+INSERT INTO EMPLEADO (nombre, email) VALUES ('Laura Martinez', 'laura@example.com');
+INSERT INTO EMPLEADO (nombre, email) VALUES ('Pedro Diaz', 'pedro@example.com');
 
--- Insertando CLIENTES
-INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES
-('Pedro Herrera', 'pedro@gmail.com', '2020-01-15'),
-('Elena Martín', 'elena@gmail.com', '2021-03-10'),
-('Roberto Sánchez', 'roberto@gmail.com', '2019-05-25'),
-('Laura Pérez', 'laura@gmail.com', '2022-11-05'),
-('Juan Morales', 'juan@gmail.com', '2023-02-14');
+-- Tabla TELEFONO
+INSERT INTO TELEFONO (id_empleado, telefono) VALUES (1, '123456789');
+INSERT INTO TELEFONO (id_empleado, telefono) VALUES (2, '987654321');
+INSERT INTO TELEFONO (id_empleado, telefono) VALUES (3, '112233445');
+INSERT INTO TELEFONO (id_empleado, telefono) VALUES (4, '556677889');
+INSERT INTO TELEFONO (id_empleado, telefono) VALUES (5, '998877665');
 
--- Insertando PEDIDOS
-INSERT INTO PEDIDO (id_empleado, id_cliente, importe_total, fecha_pedido) VALUES
-(1, 1, 50.00, '2023-07-01'),
-(2, 2, 25.50, '2023-06-15'),
-(3, 3, 15.00, '2023-05-10'),
-(4, 4, 100.75, '2023-04-20'),
-(5, 5, 60.00, '2023-03-30');
+-- Tabla CLIENTE
+INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Juan Lopez', 'juan@example.com', '2020-01-01');
+INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Maria Garcia', 'maria@example.com', '2021-05-10');
+INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Jose Gonzalez', 'jose@example.com', '2022-08-15');
+INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Luisa Fernandez', 'luisa@example.com', '2023-03-20');
+INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Pablo Mendez', 'pablo@example.com', '2019-11-25');
 
--- Insertando PRODUCTO_PEDIDO
-INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES
-(1, 1, 10),
-(2, 2, 2),
-(3, 3, 1),
-(4, 4, 5),
-(5, 5, 1);
+-- Tabla STOCK
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (1, 1, 1, 20);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (2, 2, 2, 15);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (3, 3, 3, 30);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (4, 4, 4, 25);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (5, 5, 5, 50);
 
--- Ejemplo de DELETE
+-- Tabla HISTORIAL
+INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+VALUES (1, 1, 1, '2023-01-01', '2023-12-31', 'Jardinero');
 
--- Eliminar un vivero (esto eliminará las zonas y el stock relacionado por CASCADE)
-DELETE FROM VIVERO WHERE id_vivero = 1;
+INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+VALUES (2, 2, 2, '2022-06-01', NULL, 'Supervisor');
 
--- Eliminar un empleado (esto dejará el campo id_empleado en NULL en los pedidos relacionados por SET NULL)
-DELETE FROM EMPLEADO WHERE id_empleado = 2;
+INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+VALUES (3, 3, 3, '2021-04-15', '2022-04-14', 'Encargado de Zona');
 
--- Eliminar un pedido (esto eliminará los productos asociados a ese pedido por CASCADE)
-DELETE FROM PEDIDO WHERE id_pedido = 3;
+INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+VALUES (4, 4, 4, '2020-02-01', '2021-01-31', 'Ayudante');
+
+INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+VALUES (5, 5, 5, '2023-07-01', NULL, 'Técnico de Mantenimiento');
+
+-- Tablas PRODUCTO y PRODUCTO-PEDIDO
+INSERT INTO PEDIDO (id_empleado, id_cliente, importe_total, fecha_pedido) VALUES (2, 2, 250.00, '2024-01-02');
+INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (1, 2, 4);
+INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (1, 5, 10);
+INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (1, 4, 1);
+
+INSERT INTO PEDIDO (id_empleado, id_cliente, importe_total, fecha_pedido) VALUES (3, 3, 150.00, '2024-01-03');
+INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (2, 3, 6);
+
+INSERT INTO PEDIDO (id_empleado, id_cliente, importe_total) VALUES (1, 1, 499.99); -- No se especifica la fecha pilla la actual
+INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (3, 3, 5);
+INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (3, 1, 99);
+
+INSERT INTO PEDIDO (id_empleado, id_cliente, importe_total, fecha_pedido) VALUES (4, 4, 100.00, '2024-02-01');
+INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (4, 4, 10);
+
+INSERT INTO PEDIDO (id_empleado, id_cliente, importe_total, fecha_pedido) VALUES (5, 5, 350.00, '2024-03-15');
+INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 5, 20);
+INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 2, 12);
+
+-- -- Ejemplo incorrecto: Intentar insertar un producto repetido en un pedido
+-- INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (1, 2, 10);
+
+-- -- Ejemplo incorrecto: Intentar insertar un producto con precio negativo (debería fallar)
+-- INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Flor Incorrecta', -5);
+
+-- -- Ejemplo incorrecto: Insertar un pedido con una cantidad negativa (debería fallar)
+-- INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (2, 2, -2);
+
+-- -- Ejemplo incorrecto: Intentar insertar un cliente con un email duplicado (debería fallar)
+-- INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Jose Gonzalez', 'jose@example.com', '2022-08-15');
+
+-- -- Ejemplo incorrecto: Intentar insertar una zona con coordenadas fuera del rango (debería fallar)
+-- INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (3, 'Zona Invalida', 95.4698, -16.6548);
+
+-- -- Ejemplo incorrecto: Intentar insertar un vivero con coordenadas fuera del rango (debería fallar)
+-- INSERT INTO VIVERO (nombre, latitud, longitud) VALUES ('Vivero Invalido', 95.4698, -16.6548);
+
+-- -- Caso 1: Intentar insertar con una fecha_fin anterior a la fecha_inicio (debería fallar)
+-- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+-- VALUES (1, 1, 1, '2023-01-01', '2022-12-31', 'Jardinero');  -- fecha_fin < fecha_inicio
+
+-- -- Caso 2: Intentar insertar con un id_empleado inexistente (debería fallar)
+-- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+-- VALUES (999, 1, 1, '2023-01-01', NULL, 'Jardinero');  -- id_empleado no existe
+
+-- -- Caso 3: Intentar insertar con un id_vivero inexistente (debería fallar)
+-- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+-- VALUES (1, 999, 1, '2023-01-01', NULL, 'Jardinero');  -- id_vivero no existe
+
+-- -- Caso 4: Intentar insertar con un id_zona inexistente (debería fallar)
+-- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+-- VALUES (1, 1, 999, '2023-01-01', NULL, 'Jardinero');  -- id_zona no existe
+
+-- -- Caso 5: Intentar insertar una fila duplicada en términos de (id_empleado, id_vivero, id_zona) (debería fallar)
+-- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+-- VALUES (1, 1, 1, '2023-01-01', '2023-12-31', 'Jardinero');  -- PK ya existe
+
+
+
+-- Operaciones DELETE
+
+-- Borrar un vivero (esto debería eliminar las zonas y el stock asociado a dicho vivero)
+DELETE FROM VIVERO WHERE id_vivero = 2;
+
+-- Borrar un cliente y sus pedidos
+DELETE FROM CLIENTE WHERE id_cliente = 3;
+
+-- Borrar un empleado y sus registros en la tabla TELEFONO y PEDIDO
+DELETE FROM EMPLEADO WHERE id_empleado = 4;
+
+-- Borrar un producto, eliminando las relaciones en PRODUCTO_PEDIDO y STOCK
+DELETE FROM PRODUCTO WHERE id_producto = 5;
