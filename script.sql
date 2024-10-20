@@ -1,3 +1,6 @@
+-- Usa VARCHAR cuando la distinción entre mayúsculas y minúsculas es relevante.
+-- Usa CITEXT cuando la distinción entre mayúsculas y minúsculas no es relevante, como en el caso de correos electrónicos.
+
 -- Creación de la base de datos viveros
 CREATE DATABASE viveros;
 \c viveros;
@@ -10,7 +13,7 @@ CREATE EXTENSION postgis;
 -- Tabla VIVERO
 CREATE TABLE VIVERO (
     id_vivero SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
+    nombre VARCHAR(100) NOT NULL CHECK (nombre ~* '^[A-Za-zÀ-ÖØ-öø-ÿ\s\-]+$'),
     ubicacion GEOGRAPHY(POINT, 4326) NOT NULL
 );
 
@@ -18,7 +21,7 @@ CREATE TABLE VIVERO (
 CREATE TABLE ZONA (
     id_zona SERIAL PRIMARY KEY,
     id_vivero INT NOT NULL REFERENCES VIVERO(id_vivero) ON DELETE CASCADE,
-    nombre VARCHAR(100) NOT NULL,
+    nombre VARCHAR(100) NOT NULL CHECK (nombre ~* '^[A-Za-zÀ-ÖØ-öø-ÿ\s\-]+$'),
     ubicacion GEOGRAPHY(POINT, 4326) NOT NULL,
     UNIQUE (id_vivero, id_zona)
 );
@@ -26,7 +29,7 @@ CREATE TABLE ZONA (
 -- Tabla PRODUCTO
 CREATE TABLE PRODUCTO (
     id_producto SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
+    nombre VARCHAR(100) NOT NULL CHECK (nombre ~* '^[A-Za-zÀ-ÖØ-öø-ÿ\s\-]+$'),
     precio_base NUMERIC(10, 2) CHECK (precio_base > 0) NOT NULL,
     precio_final NUMERIC(10, 2) GENERATED ALWAYS AS (precio_base + (precio_base * 0.07)) STORED
 );
@@ -45,7 +48,7 @@ CREATE TABLE STOCK (
 -- Tabla EMPLEADO
 CREATE TABLE EMPLEADO (
     id_empleado SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
+    nombre VARCHAR(100) NOT NULL CHECK (nombre ~* '^[A-Za-zÀ-ÖØ-öø-ÿ\s\-]+$'),
     email CITEXT UNIQUE CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$') NOT NULL
 );
 
@@ -74,7 +77,7 @@ CREATE TABLE HISTORIAL (
 -- Tabla CLIENTE
 CREATE TABLE CLIENTE (
     id_cliente SERIAL PRIMARY KEY,
-    nombre VARCHAR(100) NOT NULL,
+    nombre VARCHAR(100) NOT NULL CHECK (nombre ~* '^[A-Za-zÀ-ÖØ-öø-ÿ\s\-]+$'),
     email CITEXT UNIQUE CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$') NOT NULL,
     fecha_ingreso DATE NOT NULL
 );
