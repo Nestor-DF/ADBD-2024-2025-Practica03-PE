@@ -18,14 +18,15 @@ CREATE TABLE ZONA (
     id_vivero INT NOT NULL REFERENCES VIVERO(id_vivero) ON DELETE CASCADE,
     nombre VARCHAR(100) NOT NULL,
     latitud NUMERIC(9, 6) CHECK (latitud BETWEEN -90 AND 90) NOT NULL,
-    longitud NUMERIC(9, 6) CHECK (longitud BETWEEN -180 AND 180) NOT NULL
+    longitud NUMERIC(9, 6) CHECK (longitud BETWEEN -180 AND 180) NOT NULL,
+    UNIQUE (id_vivero, id_zona)
 );
 
 -- Tabla PRODUCTO
 CREATE TABLE PRODUCTO (
     id_producto SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
-    precio_base NUMERIC(10, 2) CHECK (precio_base >= 0) NOT NULL,
+    precio_base NUMERIC(10, 2) CHECK (precio_base > 0) NOT NULL,
     precio_final NUMERIC(10, 2) GENERATED ALWAYS AS (precio_base + (precio_base * 0.07)) STORED
 );
 
@@ -36,8 +37,7 @@ CREATE TABLE STOCK (
     id_producto INT NOT NULL,
     stock INT CHECK (stock >= 0),
     PRIMARY KEY (id_zona, id_vivero, id_producto),
-    FOREIGN KEY (id_zona) REFERENCES ZONA(id_zona) ON DELETE CASCADE,
-    FOREIGN KEY (id_vivero) REFERENCES VIVERO(id_vivero) ON DELETE CASCADE,
+    FOREIGN KEY (id_zona, id_vivero) REFERENCES ZONA(id_zona, id_vivero) ON DELETE CASCADE,
     FOREIGN KEY (id_producto) REFERENCES PRODUCTO(id_producto) ON DELETE CASCADE
 );
 
@@ -67,7 +67,7 @@ CREATE TABLE HISTORIAL (
     FOREIGN KEY (id_empleado) REFERENCES EMPLEADO(id_empleado) ON DELETE CASCADE,
     FOREIGN KEY (id_vivero) REFERENCES VIVERO(id_vivero) ON DELETE CASCADE,
     FOREIGN KEY (id_zona) REFERENCES ZONA(id_zona) ON DELETE CASCADE,
-    PRIMARY KEY (id_empleado, id_vivero, id_zona)
+    PRIMARY KEY (id_empleado, id_vivero, id_zona, fecha_inicio)
 );
 
 -- Tabla CLIENTE
@@ -109,11 +109,11 @@ INSERT INTO VIVERO (nombre, latitud, longitud) VALUES ('Vivero Oeste', 26.4699, 
 INSERT INTO VIVERO (nombre, latitud, longitud) VALUES ('Vivero Central', 28.8799, -15.6547);
 
 -- Tabla ZONA
-INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (1, 'Zona A', 28.4698, -16.2548);
-INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (2, 'Zona B', 27.4698, -15.2548);
-INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (3, 'Zona C', 29.4698, -16.6548);
-INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (4, 'Zona D', 26.4698, -14.2548);
-INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (5, 'Zona E', 28.8798, -15.6548);
+INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (1, 'Zona A', 28.4699, -16.2548);
+INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (2, 'Zona B', -89.9999, 179.9999);
+INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (3, 'Zona C', 45.0000, 90.0000);
+INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (4, 'Zona D', -45.0000, -90.0000);
+INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (5, 'Zona Central', 0.0000, 0.0000);
 
 -- Tabla PRODUCTO
 INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Rosa', 5.00);
@@ -121,6 +121,13 @@ INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Tulipan', 7.50);
 INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Orquídea', 10.00);
 INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Girasol', 3.50);
 INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Margarita', 2.00);
+
+-- Tabla STOCK
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (1, 1, 1, 20);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (2, 2, 2, 15);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (3, 3, 3, 30);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (4, 4, 4, 25);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (5, 5, 5, 50);
 
 -- Tabla EMPLEADO
 INSERT INTO EMPLEADO (nombre, email) VALUES ('Carlos Perez', 'carlos@example.com');
@@ -135,20 +142,6 @@ INSERT INTO TELEFONO (id_empleado, telefono) VALUES (2, '987654321');
 INSERT INTO TELEFONO (id_empleado, telefono) VALUES (3, '112233445');
 INSERT INTO TELEFONO (id_empleado, telefono) VALUES (4, '556677889');
 INSERT INTO TELEFONO (id_empleado, telefono) VALUES (5, '998877665');
-
--- Tabla CLIENTE
-INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Juan Lopez', 'juan@example.com', '2020-01-01');
-INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Maria Garcia', 'maria@example.com', '2021-05-10');
-INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Jose Gonzalez', 'jose@example.com', '2022-08-15');
-INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Luisa Fernandez', 'luisa@example.com', '2023-03-20');
-INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Pablo Mendez', 'pablo@example.com', '2019-11-25');
-
--- Tabla STOCK
-INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (1, 1, 1, 20);
-INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (2, 2, 2, 15);
-INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (3, 3, 3, 30);
-INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (4, 4, 4, 25);
-INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (5, 5, 5, 50);
 
 -- Tabla HISTORIAL
 INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
@@ -165,6 +158,14 @@ VALUES (4, 4, 4, '2020-02-01', '2021-01-31', 'Ayudante');
 
 INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
 VALUES (5, 5, 5, '2023-07-01', NULL, 'Técnico de Mantenimiento');
+
+-- Tabla CLIENTE
+INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Juan Lopez', 'juan@example.com', '2020-01-01');
+INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Maria Garcia', 'maria@example.com', '2021-05-10');
+INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Jose Gonzalez', 'jose@example.com', '2022-08-15');
+INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Luisa Fernandez', 'luisa@example.com', '2023-03-20');
+INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Pablo Mendez', 'pablo@example.com', '2019-11-25');
+
 
 -- Tablas PRODUCTO y PRODUCTO-PEDIDO
 INSERT INTO PEDIDO (id_empleado, id_cliente, importe_total, fecha_pedido) VALUES (2, 2, 250.00, '2024-01-02');
@@ -186,41 +187,91 @@ INSERT INTO PEDIDO (id_empleado, id_cliente, importe_total, fecha_pedido) VALUES
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 5, 20);
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 2, 12);
 
--- -- Ejemplo incorrecto: Intentar insertar un producto repetido en un pedido
--- INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (1, 2, 10);
 
--- -- Ejemplo incorrecto: Intentar insertar un producto con precio negativo (debería fallar)
--- INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Flor Incorrecta', -5);
+-- -- Tabla VIVERO
+-- -- Latitud fuera del rango permitido (-90 a 90)
+-- INSERT INTO VIVERO (nombre, latitud, longitud) 
+-- VALUES ('Vivero Latitud Incorrecta', -91.0000, 30.0000);  -- Error: latitud fuera del rango
 
--- -- Ejemplo incorrecto: Insertar un pedido con una cantidad negativa (debería fallar)
--- INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (2, 2, -2);
+-- -- Longitud fuera del rango permitido (-180 a 180)
+-- INSERT INTO VIVERO (nombre, latitud, longitud) 
+-- VALUES ('Vivero Longitud Incorrecta', 40.0000, -181.0000);  -- Error: longitud fuera del rango
 
--- -- Ejemplo incorrecto: Intentar insertar un cliente con un email duplicado (debería fallar)
--- INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Jose Gonzalez', 'jose@example.com', '2022-08-15');
+-- -- Latitud y longitud fuera del rango permitido
+-- INSERT INTO VIVERO (nombre, latitud, longitud) 
+-- VALUES ('Vivero Coordenadas Incorrectas', -91.0000, 200.0000);  -- Error: latitud y longitud fuera del rango
 
--- -- Ejemplo incorrecto: Intentar insertar una zona con coordenadas fuera del rango (debería fallar)
--- INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) VALUES (3, 'Zona Invalida', 95.4698, -16.6548);
+-- -- Intentar insertar un vivero sin nombre (debería fallar)
+-- INSERT INTO VIVERO (latitud, longitud) 
+-- VALUES (28.4699, -16.2547);  -- Error: el nombre es obligatorio (NOT NULL)
 
--- -- Ejemplo incorrecto: Intentar insertar un vivero con coordenadas fuera del rango (debería fallar)
--- INSERT INTO VIVERO (nombre, latitud, longitud) VALUES ('Vivero Invalido', 95.4698, -16.6548);
+-- -- Intentar insertar un vivero con un nombre muy largo (debería fallar)
+-- INSERT INTO VIVERO (nombre, latitud, longitud) 
+-- VALUES ('Vivero con un nombre extremadamente largo que supera los 100 caracteres permitidos', 28.4699, -16.2547);  -- Error: nombre excede la longitud máxima
 
--- -- Caso 1: Intentar insertar con una fecha_fin anterior a la fecha_inicio (debería fallar)
+
+-- -- Tabla ZONA
+-- -- Latitud fuera del rango permitido (-90 a 90)
+-- INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) 
+-- VALUES (1, 'Zona Latitud Incorrecta', -91.0000, 30.0000);  -- Error: latitud fuera del rango
+
+-- -- Longitud fuera del rango permitido (-180 a 180)
+-- INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) 
+-- VALUES (1, 'Zona Longitud Incorrecta', 40.0000, -181.0000);  -- Error: longitud fuera del rango
+
+-- -- Intentar insertar una zona sin nombre (debería fallar)
+-- INSERT INTO ZONA (id_vivero, latitud, longitud) 
+-- VALUES (2, 28.4699, -16.2548);  -- Error: el nombre es obligatorio (NOT NULL)
+
+-- -- Intentar insertar una zona con un nombre muy largo (debería fallar)
+-- INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) 
+-- VALUES (3, 'Zona con un nombre extremadamente largo que supera los 100 caracteres permitidos', 28.4699, -16.2548);  -- Error: nombre excede la longitud máxima
+
+-- -- Intentar insertar una zona asociada a un vivero inexistente (debería fallar)
+-- INSERT INTO ZONA (id_vivero, nombre, latitud, longitud) 
+-- VALUES (999, 'Zona Vivero Inexistente', 28.4699, -16.2548);  -- Error: referencia a un id_vivero que no existe
+
+
+-- -- Tabla PRODUCTO
+-- -- Precio base negativo (debería fallar)
+-- INSERT INTO PRODUCTO (nombre, precio_base) 
+-- VALUES ('Flor Negativa', -10.00);  -- Error: el precio_base no puede ser negativo
+
+-- -- Intentar insertar un producto sin nombre (debería fallar)
+-- INSERT INTO PRODUCTO (precio_base) 
+-- VALUES (5.00);  -- Error: el nombre es obligatorio (NOT NULL)
+
+-- -- Intentar insertar un producto con un nombre muy largo (debería fallar)
+-- INSERT INTO PRODUCTO (nombre, precio_base) 
+-- VALUES ('Producto con un nombre extremadamente largo que supera los 100 caracteres permitidos', 8.50);  -- Error: nombre excede la longitud máxima
+
+-- -- Intentar insertar un producto sin precio_base (debería fallar)
+-- INSERT INTO PRODUCTO (nombre) 
+-- VALUES ('Producto Sin Precio');  -- Error: el precio_base es obligatorio (NOT NULL)
+
+-- -- Intentar insertar un producto con precio_base no numérico (debería fallar)
+-- INSERT INTO PRODUCTO (nombre, precio_base) 
+-- VALUES ('Producto No Numérico', 'precio');  -- Error: el precio_base debe ser numérico
+
+
+-- -- Tabla HISTORIAL
+-- -- Intentar insertar con una fecha_fin anterior a la fecha_inicio (debería fallar)
 -- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
 -- VALUES (1, 1, 1, '2023-01-01', '2022-12-31', 'Jardinero');  -- fecha_fin < fecha_inicio
 
--- -- Caso 2: Intentar insertar con un id_empleado inexistente (debería fallar)
+-- -- Intentar insertar con un id_empleado inexistente (debería fallar)
 -- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
 -- VALUES (999, 1, 1, '2023-01-01', NULL, 'Jardinero');  -- id_empleado no existe
 
--- -- Caso 3: Intentar insertar con un id_vivero inexistente (debería fallar)
+-- -- Intentar insertar con un id_vivero inexistente (debería fallar)
 -- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
 -- VALUES (1, 999, 1, '2023-01-01', NULL, 'Jardinero');  -- id_vivero no existe
 
--- -- Caso 4: Intentar insertar con un id_zona inexistente (debería fallar)
+-- -- Intentar insertar con un id_zona inexistente (debería fallar)
 -- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
 -- VALUES (1, 1, 999, '2023-01-01', NULL, 'Jardinero');  -- id_zona no existe
 
--- -- Caso 5: Intentar insertar una fila duplicada en términos de (id_empleado, id_vivero, id_zona) (debería fallar)
+-- -- Intentar insertar una fila duplicada en términos de (id_empleado, id_vivero, id_zona) (debería fallar)
 -- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
 -- VALUES (1, 1, 1, '2023-01-01', '2023-12-31', 'Jardinero');  -- PK ya existe
 

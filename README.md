@@ -18,7 +18,7 @@ EMPLEADO(**id_empleado**, nombre, email)
 TELEFONO(**id_empleado**, telefono)
 - id_empleado: FOREIGN KEY de EMPLEADO(id_empleado)
 
-HISTORIAL(**_id_empleado_**, **_id_vivero_**, **_id_zona_**, fecha_inicio, fecha_fin, puesto) 
+HISTORIAL(**_id_empleado_**, **_id_vivero_**, **_id_zona_**, **fecha_inicio**, fecha_fin, puesto) 
 - id_empleado: FOREIGN KEY de EMPLEADO(id_empleado)
 - id_vivero: FOREIGN KEY de VIVERO(id_vivero)
 - id_zona: FOREIGN KEY de ZONA(id_zona)
