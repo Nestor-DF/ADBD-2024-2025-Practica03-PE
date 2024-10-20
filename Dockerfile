@@ -1,5 +1,5 @@
 # Usa la imagen oficial de PostgreSQL
-FROM postgres:latest
+FROM postgis/postgis:latest
 
 # Configura las variables de entorno necesarias para PostgreSQL
 ENV POSTGRES_USER=nestor
