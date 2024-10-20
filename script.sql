@@ -2,6 +2,7 @@
 -- Usa CITEXT cuando la distinción entre mayúsculas y minúsculas no es relevante, como en el caso de correos electrónicos.
 
 -- Creación de la base de datos viveros
+DROP DATABASE IF EXISTS viveros;
 CREATE DATABASE viveros;
 \c viveros;
 

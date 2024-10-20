@@ -1,3 +1,28 @@
+## Instrucciones para Usar el Script
+
+Asegúrate de tener Docker instalado y configurado en tu máquina antes de ejecutar estos comandos.
+
+1. **Construir la imagen Docker**:
+```bash
+docker build -t my-postgres-image .
+```
+
+2. **Ejecutar el contenedor Docker**:
+```bash
+docker run --name my-postgres-container -v $(pwd):/docker-entrypoint-initdb.d -e POSTGRES_USER=nestor -e POSTGRES_PASSWORD=12ab12ab -e POSTGRES_DB=viveros -p 5432:5432 my-postgres-image
+```
+
+3. **Conectarse a postgresql**:
+```bash
+psql -h localhost -U nestor -d postgres
+```
+
+4. **Ejecutar el script**:
+```sql
+\i script.sql
+```
+
+
 ## Modelo Relacional
 
 VIVERO(**id_vivero**, nombre, latitud, longuitud)
@@ -35,7 +60,7 @@ PRODUCTO-PEDIDO(**_id_pedido_**, **_id_producto_**, cantidad)
 - id_pedido: FOREIGN KEY de PEDIDO(id_pedido)
 
 
-## Restricciones semánticas que no puede recoger el modelo entidad/relación
+## Restricciones semánticas
 - Un pedido no puede ser realizado si no hay productos en stock.
 - El stock de un producto no puede ser negativo.
 - El importe total de un pedido debe ser mayor a cero.

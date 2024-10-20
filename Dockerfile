@@ -15,7 +15,3 @@ RUN mkdir -p /docker-entrypoint-initdb.d
 
 # Exponemos el puerto de PostgreSQL
 EXPOSE 5432
-
-#docker build -t my-postgres-image .
-#docker run --name my-postgres-container -v $(pwd):/docker-entrypoint-initdb.d -e POSTGRES_USER=nestor -e POSTGRES_PASSWORD=12ab12ab -e POSTGRES_DB=viveros -p 5432:5432 my-postgres-image
-#psql -h localhost -U nestor -d viveros
