@@ -1,6 +1,11 @@
 ## Instrucciones para Usar el Script
 
-Asegúrate de tener Docker instalado y configurado en tu máquina antes de ejecutar estos comandos.
+0. Asegúrate de tener Docker y el cliente postgreSQL instalado en tu máquina.
+```bash
+sudo apt update
+sudo apt install docker.io
+sudo apt install postgresql-client
+```
 
 1. **Construir la imagen Docker**:
 ```bash
