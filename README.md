@@ -1,4 +1,4 @@
-## Instrucciones para Usar el Script
+## Instrucciones para Usar el Script con Docker
 
 0. Asegúrate de tener Docker y el cliente postgreSQL instalado en tu máquina.
 ```bash
