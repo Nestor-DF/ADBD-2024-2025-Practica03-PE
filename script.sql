@@ -88,7 +88,7 @@ CREATE TABLE PEDIDO (
     id_pedido SERIAL PRIMARY KEY,
     id_empleado INT NOT NULL,
     id_cliente INT,
-    importe_total NUMERIC(10, 2) CHECK (importe_total > 0) NOT NULL, -- CALCULAR IMPORTE TOTAL
+    importe_total NUMERIC(10, 2),
     fecha_pedido DATE NOT NULL DEFAULT CURRENT_DATE,
     FOREIGN KEY (id_empleado) REFERENCES EMPLEADO(id_empleado) ON DELETE CASCADE,
     FOREIGN KEY (id_cliente) REFERENCES CLIENTE(id_cliente) ON DELETE CASCADE
@@ -101,6 +101,36 @@ CREATE TABLE PRODUCTO_PEDIDO (
     cantidad INT CHECK (cantidad > 0) NOT NULL,
     PRIMARY KEY (id_pedido, id_producto)
 );
+
+
+
+
+CREATE OR REPLACE FUNCTION calcular_importe_total()
+RETURNS TRIGGER AS $$
+DECLARE
+    total NUMERIC(10, 2);
+BEGIN
+    -- Cálculo del importe total
+    SELECT SUM(pp.cantidad * p.precio_final)
+    INTO total
+    FROM PRODUCTO_PEDIDO pp
+    JOIN PRODUCTO p ON pp.id_producto = p.id_producto
+    WHERE pp.id_pedido = NEW.id_pedido;
+
+    -- Actualizar el importe total en la tabla PEDIDO
+    UPDATE PEDIDO
+    SET importe_total = total
+    WHERE id_pedido = NEW.id_pedido;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_calcular_importe_total
+AFTER INSERT OR UPDATE ON PRODUCTO_PEDIDO
+FOR EACH ROW
+EXECUTE FUNCTION calcular_importe_total();
+
 
 
 
@@ -168,24 +198,26 @@ INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Luisa Fernandez', 'l
 INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Pablo Mendez', 'pablo@example.com', '2019-11-25');
 
 -- Tablas PRODUCTO y PRODUCTO-PEDIDO
-INSERT INTO PEDIDO (id_empleado, id_cliente, importe_total, fecha_pedido) VALUES (2, 2, 250.00, '2024-01-02');
+INSERT INTO PEDIDO (id_empleado, id_cliente, fecha_pedido) VALUES (2, 2, '2024-01-02');
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (1, 2, 4);
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (1, 5, 10);
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (1, 4, 1);
 
-INSERT INTO PEDIDO (id_empleado, id_cliente, importe_total, fecha_pedido) VALUES (3, 3, 150.00, '2024-01-03');
+INSERT INTO PEDIDO (id_empleado, id_cliente, fecha_pedido) VALUES (3, 3, '2024-01-03');
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (2, 3, 6);
 
-INSERT INTO PEDIDO (id_empleado, id_cliente, importe_total) VALUES (1, 1, 499.99); -- No se especifica la fecha pilla la actual
+INSERT INTO PEDIDO (id_empleado, id_cliente) VALUES (1, 1); -- No se especifica la fecha pilla la actual
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (3, 3, 5);
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (3, 1, 99);
 
-INSERT INTO PEDIDO (id_empleado, id_cliente, importe_total, fecha_pedido) VALUES (4, 4, 100.00, '2024-02-01');
+INSERT INTO PEDIDO (id_empleado, id_cliente, fecha_pedido) VALUES (4, 4, '2024-02-01');
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (4, 4, 10);
 
-INSERT INTO PEDIDO (id_empleado, id_cliente, importe_total, fecha_pedido) VALUES (5, 5, 350.00, '2024-03-15');
+INSERT INTO PEDIDO (id_empleado, id_cliente, fecha_pedido) VALUES (5, 5, '2024-03-15');
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 5, 20);
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 2, 12);
+
+
 
 
 -- -- Tabla VIVERO
@@ -286,18 +318,28 @@ INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 2, 12)
 -- -- Intento de insertar un cliente con fecha de ingreso en formato incorrecto (si tu base de datos no permite esto)
 -- INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Maria Garcia', 'maria@example.com', '2024/01/01'); -- Debe fallar si la fecha no está en el formato adecuado
 
+-- -- Tablas PRODUCTO y PRODUCTO-PEDIDO
+-- -- Intentar insertar un empleado que no existe
+-- INSERT INTO PEDIDO (id_empleado, id_cliente, fecha_pedido) VALUES (69, 4, '2024-02-01');
+-- -- Intentar insertar un pedido que no existe
+-- INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (69, 4, 10);
+
+-- -- Intentar insertar un cliente que no existe
+-- INSERT INTO PEDIDO (id_empleado, id_cliente, fecha_pedido) VALUES (5, 69, '2024-03-15');
+-- -- Intentar insertar una cantidad negativa o 0
+-- INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 5, 0);
+-- -- Insertar un producto que no existe
+-- INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 69, 12);
 
 
--- Operaciones DELETE
 
--- Borrar un vivero (esto debería eliminar las zonas y el stock asociado a dicho vivero)
-DELETE FROM VIVERO WHERE id_vivero = 2;
 
--- Borrar un cliente y sus pedidos
-DELETE FROM CLIENTE WHERE id_cliente = 3;
-
--- Borrar un empleado y sus registros en la tabla TELEFONO y PEDIDO
-DELETE FROM EMPLEADO WHERE id_empleado = 4;
-
--- Borrar un producto, eliminando las relaciones en PRODUCTO_PEDIDO y STOCK
-DELETE FROM PRODUCTO WHERE id_producto = 5;
+-- -- Operaciones DELETE
+-- -- Borrar un vivero (esto debería eliminar las zonas y el stock asociado a dicho vivero)
+-- DELETE FROM VIVERO WHERE id_vivero = 2;
+-- -- Borrar un cliente y sus pedidos
+-- DELETE FROM CLIENTE WHERE id_cliente = 3;
+-- -- Borrar un empleado y sus registros en la tabla TELEFONO y PEDIDO
+-- DELETE FROM EMPLEADO WHERE id_empleado = 4;
+-- -- Borrar un producto, eliminando las relaciones en PRODUCTO_PEDIDO y STOCK
+-- DELETE FROM PRODUCTO WHERE id_producto = 5;
