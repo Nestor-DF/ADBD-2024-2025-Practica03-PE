@@ -1,5 +1,5 @@
--- Usa VARCHAR cuando la distinción entre mayúsculas y minúsculas es relevante.
--- Usa CITEXT cuando la distinción entre mayúsculas y minúsculas no es relevante, como en el caso de correos electrónicos.
+-- VARCHAR cuando la distinción entre mayúsculas y minúsculas es relevante.
+-- CITEXT cuando la distinción entre mayúsculas y minúsculas no es relevante, como en el caso de correos electrónicos.
 
 -- Creación de la base de datos viveros
 DROP DATABASE IF EXISTS viveros;
@@ -20,11 +20,11 @@ CREATE TABLE VIVERO (
 
 -- Tabla ZONA
 CREATE TABLE ZONA (
-    id_zona SERIAL PRIMARY KEY,
+    id_zona INT NOT NULL,
     id_vivero INT NOT NULL REFERENCES VIVERO(id_vivero) ON DELETE CASCADE,
     nombre VARCHAR(100) NOT NULL CHECK (nombre ~* '^[A-Za-zÀ-ÖØ-öø-ÿ\s\-]+$'),
     ubicacion GEOGRAPHY(POINT, 4326) NOT NULL,
-    UNIQUE (id_vivero, id_zona)
+    PRIMARY KEY (id_vivero, id_zona)
 );
 
 -- Tabla PRODUCTO
@@ -42,7 +42,7 @@ CREATE TABLE STOCK (
     id_producto INT NOT NULL,
     stock INT CHECK (stock >= 0),
     PRIMARY KEY (id_zona, id_vivero, id_producto),
-    FOREIGN KEY (id_zona, id_vivero) REFERENCES ZONA(id_zona, id_vivero) ON DELETE CASCADE,
+    FOREIGN KEY (id_vivero, id_zona) REFERENCES ZONA(id_vivero, id_zona) ON DELETE CASCADE,
     FOREIGN KEY (id_producto) REFERENCES PRODUCTO(id_producto) ON DELETE CASCADE
 );
 
@@ -61,17 +61,16 @@ CREATE TABLE TELEFONO (
     PRIMARY KEY (id_empleado, telefono)
 );
 
--- Crear tabla HISTORIAL REVISAR LO DE LAS FECHAS
+-- Crear tabla HISTORIAL
 CREATE TABLE HISTORIAL (
-    id_empleado INT NOT NULL,
+    id_empleado INT,
     id_vivero INT NOT NULL,
     id_zona INT NOT NULL,
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE CHECK (fecha_fin IS NULL OR fecha_fin > fecha_inicio),
     puesto VARCHAR(100),
-    FOREIGN KEY (id_empleado) REFERENCES EMPLEADO(id_empleado) ON DELETE CASCADE,
-    FOREIGN KEY (id_vivero) REFERENCES VIVERO(id_vivero) ON DELETE CASCADE,
-    FOREIGN KEY (id_zona) REFERENCES ZONA(id_zona) ON DELETE CASCADE,
+    FOREIGN KEY (id_empleado) REFERENCES EMPLEADO(id_empleado) ON DELETE RESTRICT,
+    FOREIGN KEY (id_vivero, id_zona) REFERENCES ZONA(id_vivero, id_zona) ON DELETE CASCADE,
     PRIMARY KEY (id_empleado, id_vivero, id_zona, fecha_inicio)
 );
 
@@ -86,12 +85,12 @@ CREATE TABLE CLIENTE (
 -- Crear tabla PEDIDO
 CREATE TABLE PEDIDO (
     id_pedido SERIAL PRIMARY KEY,
-    id_empleado INT NOT NULL,
+    id_empleado INT,
     id_cliente INT,
     importe_total NUMERIC(10, 2),
     fecha_pedido DATE NOT NULL DEFAULT CURRENT_DATE,
-    FOREIGN KEY (id_empleado) REFERENCES EMPLEADO(id_empleado) ON DELETE CASCADE,
-    FOREIGN KEY (id_cliente) REFERENCES CLIENTE(id_cliente) ON DELETE CASCADE
+    FOREIGN KEY (id_empleado) REFERENCES EMPLEADO(id_empleado) ON DELETE RESTRICT,
+    FOREIGN KEY (id_cliente) REFERENCES CLIENTE(id_cliente) ON DELETE SET NULL
 );
 
 -- Tabla PRODUCTO-PEDIDO
@@ -132,6 +131,62 @@ FOR EACH ROW
 EXECUTE FUNCTION calcular_importe_total();
 
 
+CREATE OR REPLACE FUNCTION validar_periodo_trabajo()
+RETURNS TRIGGER AS $$
+DECLARE
+    existe_conflicto BOOLEAN;
+BEGIN
+    SELECT EXISTS (
+        SELECT 1
+        FROM HISTORIAL
+        WHERE id_empleado = NEW.id_empleado
+        AND (
+            (NEW.fecha_inicio BETWEEN fecha_inicio AND COALESCE(fecha_fin, 'infinity')) OR
+            (COALESCE(NEW.fecha_fin, 'infinity') BETWEEN fecha_inicio AND COALESCE(fecha_fin, 'infinity')) OR
+            (fecha_inicio BETWEEN NEW.fecha_inicio AND COALESCE(NEW.fecha_fin, 'infinity'))
+        )
+    ) INTO existe_conflicto;
+
+    IF existe_conflicto THEN
+        RAISE EXCEPTION 'El empleado ya tiene un trabajo registrado en ese periodo de tiempo.';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_validar_periodo_trabajo
+BEFORE INSERT OR UPDATE ON HISTORIAL
+FOR EACH ROW
+EXECUTE FUNCTION validar_periodo_trabajo();
+
+
+CREATE OR REPLACE FUNCTION verificar_stock_disponible()
+RETURNS TRIGGER AS $$
+DECLARE
+    stock_disponible INT;
+BEGIN
+    SELECT stock INTO stock_disponible
+    FROM STOCK
+    WHERE id_producto = NEW.id_producto
+    FOR UPDATE;  -- Bloquear el registro para evitar modificaciones concurrentes
+
+    IF stock_disponible IS NULL THEN
+        RAISE EXCEPTION 'Producto no disponible en stock para este vivero/zona.';
+    ELSIF stock_disponible < NEW.cantidad THEN
+        RAISE EXCEPTION 'No hay suficiente stock disponible. Disponible: %, Requerido: %', stock_disponible, NEW.cantidad;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_verificar_stock
+BEFORE INSERT ON PRODUCTO_PEDIDO
+FOR EACH ROW
+EXECUTE FUNCTION verificar_stock_disponible();
+
+
 
 
 -- Insertar datos de prueba
@@ -144,11 +199,13 @@ INSERT INTO VIVERO (nombre, ubicacion) VALUES ('Vivero Oeste', ST_GeogFromText('
 INSERT INTO VIVERO (nombre, ubicacion) VALUES ('Vivero Central', ST_GeogFromText('POINT(28.8799 -15.6547)'));
 
 -- Tabla ZONA
-INSERT INTO ZONA (id_vivero, nombre, ubicacion) VALUES (1, 'Zona A', ST_GeogFromText('POINT(28.4699 -16.2548)'));
-INSERT INTO ZONA (id_vivero, nombre, ubicacion) VALUES (2, 'Zona B', ST_GeogFromText('POINT(-28.4699 16.2547)'));
-INSERT INTO ZONA (id_vivero, nombre, ubicacion) VALUES (3, 'Zona C', ST_GeogFromText('POINT(45.0000 90.0000)'));
-INSERT INTO ZONA (id_vivero, nombre, ubicacion) VALUES (4, 'Zona D', ST_GeogFromText('POINT(-45.0000 -90.0000)'));
-INSERT INTO ZONA (id_vivero, nombre, ubicacion) VALUES (5, 'Zona Central', ST_GeogFromText('POINT(0.0000 0.0000)'));
+INSERT INTO ZONA (id_vivero, id_zona, nombre, ubicacion) VALUES (1, 1, 'Zona A', ST_GeogFromText('POINT(28.4699 -16.2548)'));
+INSERT INTO ZONA (id_vivero, id_zona, nombre, ubicacion) VALUES (2, 2, 'Zona B', ST_GeogFromText('POINT(-28.4699 16.2547)'));
+INSERT INTO ZONA (id_vivero, id_zona, nombre, ubicacion) VALUES (3, 3, 'Zona C', ST_GeogFromText('POINT(45.0000 90.0000)'));
+INSERT INTO ZONA (id_vivero, id_zona, nombre, ubicacion) VALUES (4, 4, 'Zona D', ST_GeogFromText('POINT(-45.0000 -90.0000)'));
+INSERT INTO ZONA (id_vivero, id_zona, nombre, ubicacion) VALUES (1, 4, 'Zona D', ST_GeogFromText('POINT(-45.0000 -90.0000)'));
+INSERT INTO ZONA (id_vivero, id_zona, nombre, ubicacion) VALUES (5, 5, 'Zona Central', ST_GeogFromText('POINT(0.0000 0.0000)'));
+INSERT INTO ZONA (id_vivero, id_zona, nombre, ubicacion) VALUES (5, 6, 'Zona Oeste', ST_GeogFromText('POINT(0.0000 0.0000)'));
 
 -- Tabla PRODUCTO
 INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Rosa', 5.00);
@@ -158,11 +215,12 @@ INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Girasol', 3.50);
 INSERT INTO PRODUCTO (nombre, precio_base) VALUES ('Margarita', 2.00);
 
 -- Tabla STOCK
-INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (1, 1, 1, 20);
-INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (2, 2, 2, 15);
-INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (3, 3, 3, 30);
-INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (4, 4, 4, 25);
-INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (5, 5, 5, 50);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (1, 1, 1, 200);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (2, 2, 2, 150);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (3, 3, 3, 300);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (3, 3, 4, 99);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (4, 4, 4, 250);
+INSERT INTO STOCK (id_vivero, id_zona, id_producto, stock) VALUES (5, 5, 5, 500);
 
 -- Tabla EMPLEADO
 INSERT INTO EMPLEADO (nombre, email) VALUES ('Carlos Perez', 'carlos@example.com');
@@ -188,6 +246,8 @@ VALUES (3, 3, 3, '2021-04-15', '2022-04-14', 'Encargado de Zona');
 INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
 VALUES (4, 4, 4, '2020-02-01', '2021-01-31', 'Ayudante');
 INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+VALUES (4, 4, 4, '2024-02-01', '2025-01-31', 'Ayudante');
+INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
 VALUES (5, 5, 5, '2023-07-01', NULL, 'Técnico de Mantenimiento');
 
 -- Tabla CLIENTE
@@ -197,7 +257,7 @@ INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Jose Gonzalez', 'jos
 INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Luisa Fernandez', 'luisa@example.com', '2023-03-20');
 INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Pablo Mendez', 'pablo@example.com', '2019-11-25');
 
--- Tablas PRODUCTO y PRODUCTO-PEDIDO
+-- Tablas PEDIDO y PRODUCTO-PEDIDO
 INSERT INTO PEDIDO (id_empleado, id_cliente, fecha_pedido) VALUES (2, 2, '2024-01-02');
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (1, 2, 4);
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (1, 5, 10);
@@ -210,7 +270,7 @@ INSERT INTO PEDIDO (id_empleado, id_cliente) VALUES (1, 1); -- No se especifica 
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (3, 3, 5);
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (3, 1, 99);
 
-INSERT INTO PEDIDO (id_empleado, id_cliente, fecha_pedido) VALUES (4, 4, '2024-02-01');
+INSERT INTO PEDIDO (id_empleado, fecha_pedido) VALUES (4, '2024-02-01'); -- No se especifica el cliente (no es miembro de Tajinaste Plus, pilla NULL)
 INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (4, 4, 10);
 
 INSERT INTO PEDIDO (id_empleado, id_cliente, fecha_pedido) VALUES (5, 5, '2024-03-15');
@@ -305,6 +365,15 @@ INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 2, 12)
 -- -- Intentar insertar una fila duplicada en términos de (id_empleado, id_vivero, id_zona) (debería fallar)
 -- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
 -- VALUES (1, 1, 1, '2023-01-01', '2023-12-31', 'Jardinero');  -- PK ya existe
+-- Intentar insertar un empleado que ya está trabajando en ese periodo de tiempo (debería fallar)
+-- -- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+-- -- VALUES (5, 5, 5, '2023-07-01', NULL, 'Técnico de Mantenimiento');
+-- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+-- VALUES (5, 5, 5, '2023-08-01', NULL, 'Técnico de Mantenimiento');
+-- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+-- VALUES (5, 5, 5, '2023-07-01', '2023-10-01', 'Técnico de Mantenimiento');
+-- INSERT INTO HISTORIAL (id_empleado, id_vivero, id_zona, fecha_inicio, fecha_fin, puesto) 
+-- VALUES (5, 5, 5, '2023-06-01', '2023-10-01', 'Técnico de Mantenimiento');
 
 -- -- Tabla CLIENTE
 -- -- Intento de insertar un cliente con nombre nulo
@@ -318,28 +387,30 @@ INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 2, 12)
 -- -- Intento de insertar un cliente con fecha de ingreso en formato incorrecto (si tu base de datos no permite esto)
 -- INSERT INTO CLIENTE (nombre, email, fecha_ingreso) VALUES ('Maria Garcia', 'maria@example.com', '2024/01/01'); -- Debe fallar si la fecha no está en el formato adecuado
 
--- -- Tablas PRODUCTO y PRODUCTO-PEDIDO
+-- -- Tablas PEDIDO y PRODUCTO-PEDIDO
 -- -- Intentar insertar un empleado que no existe
 -- INSERT INTO PEDIDO (id_empleado, id_cliente, fecha_pedido) VALUES (69, 4, '2024-02-01');
 -- -- Intentar insertar un pedido que no existe
 -- INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (69, 4, 10);
-
 -- -- Intentar insertar un cliente que no existe
 -- INSERT INTO PEDIDO (id_empleado, id_cliente, fecha_pedido) VALUES (5, 69, '2024-03-15');
 -- -- Intentar insertar una cantidad negativa o 0
 -- INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 5, 0);
+-- INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 5, -7);
 -- -- Insertar un producto que no existe
 -- INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 69, 12);
+-- -- Intentar insertar sin empleado
+-- INSERT INTO PEDIDO ( id_cliente, fecha_pedido) VALUES (4, '2024-02-01');
+-- -- Intentar insertar cuando no hay stock suficiente
+-- INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 5, 9999999);
+-- INSERT INTO PRODUCTO_PEDIDO (id_pedido, id_producto, cantidad) VALUES (5, 2, 9999999);
 
 
 
 
 -- -- Operaciones DELETE
--- -- Borrar un vivero (esto debería eliminar las zonas y el stock asociado a dicho vivero)
 -- DELETE FROM VIVERO WHERE id_vivero = 2;
--- -- Borrar un cliente y sus pedidos
--- DELETE FROM CLIENTE WHERE id_cliente = 3;
--- -- Borrar un empleado y sus registros en la tabla TELEFONO y PEDIDO
--- DELETE FROM EMPLEADO WHERE id_empleado = 4;
--- -- Borrar un producto, eliminando las relaciones en PRODUCTO_PEDIDO y STOCK
+-- DELETE FROM ZONA WHERE id_zona = 1;
 -- DELETE FROM PRODUCTO WHERE id_producto = 5;
+-- DELETE FROM CLIENTE WHERE id_cliente = 3;
+-- DELETE FROM EMPLEADO WHERE id_empleado = 4;

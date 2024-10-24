@@ -1,6 +1,6 @@
 ## Instrucciones para Usar el Script con Docker
 
-0. Asegúrate de tener Docker y el cliente postgreSQL instalado en tu máquina.
+0. **Asegúrate de tener Docker y el cliente postgreSQL instalado en tu máquina.**
 ```bash
 sudo apt update
 sudo apt install docker.io
@@ -28,7 +28,12 @@ psql -h localhost -U nestor -d postgres
 ```
 
 
+
 ## Modelo Relacional
+
+- **Negrita**: clave primaria
+- _Cursiva_: clave ajena
+- **_Negrita y Cursiva_**: clave ajena y primaria
 
 VIVERO(**id_vivero**, nombre, latitud, longuitud)
 
@@ -65,14 +70,12 @@ PRODUCTO-PEDIDO(**_id_pedido_**, **_id_producto_**, cantidad)
 - id_pedido: FOREIGN KEY de PEDIDO(id_pedido)
 
 
+
 ## Restricciones semánticas
 - Un pedido no puede ser realizado si no hay productos en stock.
 - El stock de un producto no puede ser negativo.
 - El importe total de un pedido debe ser mayor a cero.
 - El precio de un producto no puede ser negativo.
+- La cantidad de producto en un pedido debe ser mayor a 0.
 - Un empleado solo puede trabajar en una única zona durante una época específica del año, una vez terminada su asignación sí puede trabajar en una zona distinta.
-- La fecha de fin de asignación de un empleado a una zona debe ser posterior a la fecha de inicio
-
-
-## Recursos empleados
-https://github.com/ull-cs/adbd/blob/main/postgresql-tutorial/index.md#introducci%C3%B3n
+- La fecha de fin de asignación de un empleado a una zona debe ser posterior a la fecha de inicio.
