@@ -50,7 +50,7 @@ STOCK(**_id_vivero_**, **_id_zona_**, **_id_producto_**, stock)
 
 EMPLEADO(**id_empleado**, nombre, email)
 
-TELEFONO(**id_empleado**, telefono)
+TELEFONO(**_id_empleado_**, telefono)
 - id_empleado: FOREIGN KEY de EMPLEADO(id_empleado)
 
 HISTORIAL(**_id_empleado_**, **_id_vivero_**, **_id_zona_**, **fecha_inicio**, fecha_fin, puesto) 
